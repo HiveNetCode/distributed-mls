@@ -1,0 +1,4 @@
+[submodule "mlspp"]
+	path = mlspp
+	url = https://github.com/cisco/mlspp.git
+	branch = main
