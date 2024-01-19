@@ -1,0 +1,15 @@
+diff --git a/lib/hpke/src/userinfo_vc.cpp b/lib/hpke/src/userinfo_vc.cpp
+index 60912af..fb7a86c 100644
+--- a/lib/hpke/src/userinfo_vc.cpp
++++ b/lib/hpke/src/userinfo_vc.cpp
+@@ -219,7 +219,10 @@ struct UserInfoVC::ParsedCredential
+     const auto payload = json::parse(to_ascii(from_base64url(payload_b64)));
+ 
+     // Prepare the validation inputs
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdangling-reference"
+     const auto& sig = signature_from_alg(header.at("alg"));
++#pragma GCC diagnostic pop
+     const auto to_be_signed = from_ascii(header_b64 + "." + payload_b64);
+     auto signature = from_base64url(signature_b64);
+     if (is_ecdsa(sig)) {
