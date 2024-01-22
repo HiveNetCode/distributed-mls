@@ -358,6 +358,8 @@ int main(int argc, char * argv[])
     auto keyPackageBytes = marshalToBytes(client.getKeyPackage());
     publishToPKI(pkiAddress, addr, std::string{clientIdentity, strlen(clientIdentity)}, keyPackageBytes);
 
+    printf("Client is running, you can now use the commands: create, add, remove, update and message\n");
+
     net.runSelect([&]()
     {
         std::string line;
