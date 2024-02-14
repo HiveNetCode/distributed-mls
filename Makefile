@@ -16,7 +16,7 @@ CXXFLAGS += -I$(MLSPP)/include \
 	-std=c++20
 LDFLAGS += $(MLSPP)/build/libmlspp.a \
 	$(MLSPP)/build/lib/*/*.a \
-	-lssl -lssl3 -lcrypto
+	-lssl -lcrypto
 
 ifdef DEBUG
 	CXXFLAGS += -g -DPRINT

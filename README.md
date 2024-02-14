@@ -58,3 +58,19 @@ Then, the client provides five commands:
 * `remove <user>` allows to remove a given member from the group.
 * `update` performs an MLS Post-Compromise update of the current member.
 * `message <message>` allows to send a message to all group members. This message will be sent end-to-end encrypted to group members as the purpose of the MLS Protocol.
+
+### Build and Run using Docker
+
+Alternatively, a Dockerfile is provided to build the project using Docker. The build command is the following:
+```bash
+docker build -t distributed-mls .
+```
+
+Then, the `pki`, as well as the `mls-client` can be run with the following commands:
+```bash
+docker run --rm -it -p 10501:10501 distributed-mls bin/pki
+```
+and
+```bash
+docker run --rm -it --network=host distributed-mls bin/mls_client client1 127.0.0.1 300
+```
