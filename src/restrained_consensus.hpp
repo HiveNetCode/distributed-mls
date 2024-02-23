@@ -100,6 +100,7 @@ public:
             };
 
             // Allow to test delay before sending restrained cons (otherwise with no delay everybody else immediately RETRACT)
+#ifdef TEST
             char * delay = std::getenv("TEST_RC_DELAY");
             if(delay)
             {
@@ -115,6 +116,7 @@ public:
                 }}.detach();
             }
             else
+#endif
             {
                 m_broadcast(RestrainedConsensusMessage{content},
                     getParticipants(conflictSet));

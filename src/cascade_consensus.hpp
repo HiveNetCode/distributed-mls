@@ -232,6 +232,7 @@ protected:
             printf("CAC1 Deliver: Conflict between %ld commit messages\n",
                 conflictSet.size());
 
+#ifdef TEST
             // Allow to test random crashes before starting a restrained consensus
             char * crashProbability = std::getenv("TEST_RC_CRASH");
             if(crashProbability && rand() % std::atoi(crashProbability) == 0)
@@ -239,6 +240,7 @@ protected:
                 printf("TEST_RC_CRASH: Crash\n");
                 exit(0);
             }
+#endif
 
             const auto sender = m_state->getCommitSender(message);
             if(sender == m_state->index())
