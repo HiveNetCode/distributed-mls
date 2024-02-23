@@ -278,6 +278,12 @@ public:
             std::forward<mls::ApplicationData>({ content }), {}, true /** Mandatory to be true even though we only sign */);
     }
 
+    // Expose list of received proposals, to be committed
+    const std::list<CachedProposal> & cachedProposals() const
+    {
+        return _pending_proposals;
+    }
+
     // Just expose the ability of verifying authenticated contents
     bool verify(const mls::AuthenticatedContent & authContent) const
     {

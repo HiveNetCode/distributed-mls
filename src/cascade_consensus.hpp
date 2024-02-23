@@ -128,6 +128,11 @@ public:
         m_cacInstance1.validateMessage(commit);
     }
 
+    bool cac1HasStarted() const
+    {
+        return m_cacInstance1.hasStarted();
+    }
+
 protected:
     void broadcastCAC1Message(const CACMessage<mls::MLSMessage> & cacMessage)
     {

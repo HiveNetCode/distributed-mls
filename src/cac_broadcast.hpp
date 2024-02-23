@@ -79,6 +79,12 @@ public:
         m_waitingMessages.clear();
     }
 
+    // Return whether the broadcast instance has started for the current epoch
+    bool hasStarted() const
+    {
+        return m_sigCount > 0;
+    }
+
     void broadcast(const MessageT & message)
     {
         if(m_sigCount > 0) // Already signed a statement

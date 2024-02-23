@@ -40,6 +40,7 @@
 #include "mls/crypto.h"
 #include "mls/messages.h"
 #include "mls/state.h"
+#include "mls/tree_math.h"
 #include "tls/tls_syntax.h"
 
 #include "check.hpp"
@@ -140,6 +141,9 @@ public:
 
     void commit()
     {
+        if(!dds.canProposeCommit())
+            return; // Too late to propose commit, don't make to effort to create one
+
         // Copy the state to avoid side-effects of removeSelfUpdate()
         ExtendedMLSState copyState = state.value();
         copyState.removeSelfUpdate();
@@ -185,17 +189,25 @@ public:
         }
         else if(state->isValidProposal(message))
         {
-            bool proposalFromSelf = state->isProposalFromSelf(message); // Read proposal before handle (otherwise function should read from cached proposals ?)
             state->handle(message);
 
-            if(!m_commitTimeout && !m_proposedCommit)
+            if(!m_chooseCommitterTimeout)
             {
-                int delay = proposalFromSelf ? networkRtt : 2 * networkRtt;
-
-                m_commitTimeout = network.registerTimeout(delay, [this](const auto &)
+                m_chooseCommitterTimeout = network.registerTimeout(networkRtt, [this](const auto &)
                 {
-                    m_commitTimeout = {};
-                    commit();
+                    m_chooseCommitterTimeout = {};
+                    auto committer = determineCommitter();
+                    if(committer == state->index())
+                        commit();
+                    else
+                    {
+                        m_forceCommitTimeout = network.registerTimeout(networkRtt,
+                        [this](const auto &)
+                        {
+                            m_forceCommitTimeout = {};
+                            commit();
+                        });
+                    }
                 });
             }
         }
@@ -268,10 +280,15 @@ public:
             // Clean the state
             m_proposedCommit = {};
             m_associatedState = {};
-            if(m_commitTimeout)
+            if(m_chooseCommitterTimeout)
             {
-                network.unregisterTimeout(m_commitTimeout.value());
-                m_commitTimeout = {};
+                network.unregisterTimeout(m_chooseCommitterTimeout.value());
+                m_chooseCommitterTimeout = {};
+            }
+            if(m_forceCommitTimeout)
+            {
+                network.unregisterTimeout(m_forceCommitTimeout.value());
+                m_forceCommitTimeout = {};
             }
 
             return &state.value();
@@ -290,6 +307,50 @@ public:
         return keyPackage;
     }
 
+protected:
+    // Based on the current proposals, determine the best member to commit
+    mls::LeafIndex determineCommitter()
+    {
+        // Choose in priority a member who sent an Update proposal, and pick the committer
+        //  randomly using the epoch number to keep it deterministic
+        auto epochMod = state->epoch() % state->getMembersIdentity().size();
+
+        auto proposalsIt = state->cachedProposals().begin();
+
+        mls::LeafIndex bestIdx = proposalsIt->sender.value();
+        auto bestDist = bestIdx.val +
+            (bestIdx.val < epochMod ? state->getMembersIdentity().size() : 0) - epochMod;
+        bool isBestUpdate = proposalsIt->proposal.proposal_type() == mls::ProposalType::update;
+        ++proposalsIt;
+
+        for(; proposalsIt != state->cachedProposals().end(); ++proposalsIt)
+        {
+            if(!isBestUpdate
+                && proposalsIt->proposal.proposal_type() == mls::ProposalType::update)
+            {
+                isBestUpdate = true;
+                bestIdx = proposalsIt->sender.value();
+                bestDist = bestIdx.val +
+                    (bestIdx.val < epochMod ? state->getMembersIdentity().size() : 0)
+                    - epochMod;
+            }
+            else if(!isBestUpdate || (isBestUpdate
+                && proposalsIt->proposal.proposal_type() == mls::ProposalType::update))
+            {
+                auto dist = proposalsIt->sender.value().val +
+                    (bestIdx.val < epochMod ? state->getMembersIdentity().size() : 0) - epochMod;
+
+                if(dist < bestDist)
+                {
+                    bestDist = dist;
+                    bestIdx = proposalsIt->sender.value();
+                }
+            }
+        }
+
+        return bestIdx;
+    }
+
 private:
     mls::HPKEPrivateKey initKey, leafKey;
     mls::SignaturePrivateKey identityKey;
@@ -305,7 +366,8 @@ private:
     std::optional<mls::MLSMessage> m_proposedCommit = {};
     std::optional<ExtendedMLSState> m_associatedState = {};
 
-    std::optional<timeoutID> m_commitTimeout = {};
+    std::optional<timeoutID> m_chooseCommitterTimeout = {},
+        m_forceCommitTimeout = {};
 
     std::optional<ExtendedMLSState> state;
 };

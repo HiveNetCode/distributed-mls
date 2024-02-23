@@ -108,6 +108,11 @@ public:
         m_gossipBcast.dispatchMessage(msg);
     }
 
+    bool canProposeCommit() const
+    {
+        return !m_cascadeConsensus.cac1HasStarted();
+    }
+
     void proposeCommit(const mls::MLSMessage & msg, std::optional<mls::Welcome> welcome)
     {
         if(!state)
@@ -256,7 +261,8 @@ protected:
 
     const mls::MLSMessage & chooseCommit(const std::vector<mls::MLSMessage> & commits)
     {
-        // We choose the commit with most proposal and tie break on smallest sender id
+        // We choose the commit with most proposals and tie break on smallest sender id
+        // TODO Investigate other use, for example to ensure a remove proposal is indeed commited
         const mls::MLSMessage * bestCommit = &commits[0];
         auto [bestSender, proposals] = state->getCommitContent(commits[0]);
         size_t bestCount = proposals.size();
